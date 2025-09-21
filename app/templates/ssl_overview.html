@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex align-items-center justify-content-between">
+  <h2 class="mb-3">SSL — сводка по сайтам</h2>
+  <div>
+    <a class="btn btn-outline-primary" href="/ssl/scan">Сканировать сейчас</a>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-12 col-lg-7 mb-4">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Таблица последних статусов</h5>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>Сайт</th>
+                <th>Issuer</th>
+                <th>CN</th>
+                <th>Выдан</th>
+                <th>Истекает</th>
+                <th>Ост. дни</th>
+                <th>Host</th>
+                <th>Валиден</th>
+                <th>Цепочка</th>
+                <th>Ошибка</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for site, s in rows %}
+              <tr class="{% if not s.time_valid_now or not s.chain_ok or s.error %}table-danger{% endif %}">
+                <td><a href="/ssl/site/{{site.id}}">{{ site.name or site.url }}</a></td>
+                <td>{{ s.issuer or '-' }}</td>
+                <td>{{ s.subject_cn or '-' }}</td>
+                <td>{{ s.not_before or '-' }}</td>
+                <td>{{ s.not_after or '-' }}</td>
+                <td>{{ s.days_to_expiry if s.days_to_expiry is not none else '-' }}</td>
+                <td>{{ '✔' if s.hostname_ok else '✖' }}</td>
+                <td>{{ '✔' if s.time_valid_now else '✖' }}</td>
+                <td>{{ '✔' if s.chain_ok else '✖' }}</td>
+                <td class="text-truncate" style="max-width:200px">{{ s.error or '' }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-5 mb-4">
+    <div class="card mb-4">
+      <div class="card-body">
+        <h5 class="card-title">Остаток дней до истечения</h5>
+        <canvas id="expChart"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Доля валидных</h5>
+        <canvas id="validChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+const rows = {{ rows|tojson }}.map(([site, s]) => ({site, s}));
+
+const labels = rows.map(r => r.site.name || r.site.url);
+const days = rows.map(r => r.s.days_to_expiry ?? 0);
+new Chart(document.getElementById('expChart'), {
+  type: 'bar',
+  data: { labels, datasets: [{ label: 'Дней до истечения', data: days }] },
+  options: { responsive: true, animation: false, scales: { y: { beginAtZero: true } } }
+});
+
+const valid = rows.filter(r => r.s.time_valid_now && r.s.chain_ok).length;
+const invalid = rows.length - valid;
+new Chart(document.getElementById('validChart'), {
+  type: 'pie',
+  data: { labels: ['Валидные', 'Не валидные'], datasets: [{ data: [valid, invalid] }] },
+  options: { responsive: true, animation: false }
+});
+</script>
+{% endblock %}

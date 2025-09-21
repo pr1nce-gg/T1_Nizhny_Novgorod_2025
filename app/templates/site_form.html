@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-form">
+  <h2 class="mb-3">{{ 'Редактирование сайта' if mode == 'edit' else 'Добавление сайта' }}</h2>
+
+  <form method="post" action="">
+    <div class="mb-3">
+      <label class="form-label">Название сайта</label>
+      <input type="text" name="name" class="form-control" required
+             value="{{ site.name if site else '' }}">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">URL сайта</label>
+      <input type="url" name="url" class="form-control" required
+             placeholder="https://example.com"
+             value="{{ site.url if site else '' }}">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Описание (необязательно)</label>
+      <textarea name="description" class="form-control" rows="3">{{ site.description if site and site.description else '' }}</textarea>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-sm-6 col-lg-4">
+        <label class="form-label">Интервал проверки</label>
+        <div class="input-group">
+          <input type="number" min="1" step="1" name="interval_seconds" class="form-control" required
+                 value="{{ site.interval_seconds if site else 60 }}">
+          <span class="input-group-text">сек.</span>
+        </div>
+      </div>
+
+      <div class="col-sm-6 col-lg-4">
+        <label class="form-label">Таймаут</label>
+        <div class="input-group">
+          <input type="number" min="1" step="1" name="timeout_seconds" class="form-control" required
+                 value="{{ site.timeout_seconds if site else 30 }}">
+          <span class="input-group-text">сек.</span>
+        </div>
+      </div>
+
+      <div class="col-sm-6 col-lg-4">
+        <label class="form-label">Ожидаемый код ответа</label>
+        <input type="number" min="100" max="599" step="1" name="expected_status" class="form-control" required
+               value="{{ site.expected_status if site else 200 }}">
+      </div>
+    </div>
+
+    {% if mode == 'edit' %}
+      <div class="form-check form-switch mt-3">
+        <input class="form-check-input" type="checkbox" id="activeSwitch" name="is_active"
+               value="1" {% if site and site.is_active %}checked{% endif %}>
+        <label class="form-check-label" for="activeSwitch">Активен</label>
+      </div>
+    {% endif %}
+
+    <div class="mt-4 d-flex gap-2">
+      <a href="/sites" class="btn btn-secondary">Отмена</a>
+      <button type="submit" class="btn btn-primary">Сохранить</button>
+    </div>
+  </form>
+</div>
+
+<style>
+  .page-form { max-width: 1200px; }
+</style>
+
+{% endblock %}

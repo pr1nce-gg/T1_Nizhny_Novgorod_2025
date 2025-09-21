@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+  .stats-wrap{max-width: 1800px}
+  .small-muted{font-size:.9rem;color:#6c757d}
+  .table-sm> :not(caption)>*>*{padding:.28rem .4rem}
+</style>
+
+<div class="stats-wrap">
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <h2 class="mb-0">Статистика: {{ site.name }}</h2>
+    <a class="btn btn-secondary btn-sm" href="/sites">← Назад</a>
+  </div>
+  <div class="small-muted mb-3">
+    URL: <a href="{{ site.url }}" target="_blank" rel="noopener">{{ site.url }}</a>
+  </div>
+
+  <!-- Фильтр дат/времени -->
+  <form class="row g-2 align-items-end mb-3" method="get">
+    <div class="col-sm-6 col-md-4 col-xl-3">
+      <label class="form-label mb-1">С</label>
+      <input type="datetime-local" name="from" class="form-control" value="{{ from_str }}">
+    </div>
+    <div class="col-sm-6 col-md-4 col-xl-3">
+      <label class="form-label mb-1">По</label>
+      <input type="datetime-local" name="to" class="form-control" value="{{ to_str }}">
+    </div>
+    <div class="col-sm-12 col-md-4 col-xl-3 d-flex gap-2">
+      <button class="btn btn-primary">Показать</button>
+      <a class="btn btn-outline-secondary" href="/sites/{{ site.id }}/stats">Сбросить</a>
+      <a class="btn btn-success"
+         href="/sites/{{ site.id }}/stats/export?from={{ from_str }}&to={{ to_str }}">
+        ⬇️ Экспорт в Excel
+      </a>
+    </div>
+  </form>
+
+  <!-- Вкладки -->
+  <ul class="nav nav-pills mb-3" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="charts-tab" data-bs-toggle="pill" data-bs-target="#charts" type="button" role="tab">Графики</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="tables-tab" data-bs-toggle="pill" data-bs-target="#tables" type="button" role="tab">Таблицы</button>
+    </li>
+  </ul>
+
+  <div class="tab-content">
+    <!-- ГРАФИКИ -->
+    <div class="tab-pane fade show active" id="charts" role="tabpanel" aria-labelledby="charts-tab">
+      <div class="row g-4">
+        <div class="col-xl-6">
+          <div class="card">
+            <div class="card-body">
+              <h5 class="card-title">HTTP: Время ответа (сек)</h5>
+              <canvas id="httpRespChart" height="120"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="col-xl-6">
+          <div class="card">
+            <div class="card-body">
+              <h5 class="card-title">HTTP: Коды ответа</h5>
+              <canvas id="httpStatusChart" height="120"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ТАБЛИЦЫ -->
+    <div class="tab-pane fade" id="tables" role="tabpanel" aria-labelledby="tables-tab">
+      <div class="row g-4">
+        <div class="col-xl-6">
+          <div class="card">
+            <div class="card-body">
+              <h5 class="card-title mb-2">HTTP проверки (последние в диапазоне)</h5>
+              <div class="table-responsive">
+                <table class="table table-striped table-hover table-sm align-middle">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Время</th>
+                      <th>Статус</th>
+                      <th>Время ответа, c</th>
+                      <th>Ошибка</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                  {% for c in checks %}
+                    <tr>
+                      <td class="text-nowrap">{{ c.checked_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                      <td>{{ c.status_code }}</td>
+                      <td>{{ "%.3f"|format(c.response_time or 0) }}</td>
+                      <td class="text-truncate" style="max-width:24rem;" title="{{ c.error }}">{{ c.error or '' }}</td>
+                    </tr>
+                  {% else %}
+                    <tr><td colspan="4" class="text-muted">Пока нет данных</td></tr>
+                  {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-xl-6">
+          <div class="card">
+            <div class="card-body">
+              <h5 class="card-title mb-2">SSL история (в диапазоне)</h5>
+              <div class="table-responsive">
+                <table class="table table-striped table-hover table-sm align-middle">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Время</th>
+                      <th>Issuer</th>
+                      <th>Истекает</th>
+                      <th>Дней</th>
+                      <th>Валиден</th>
+                      <th>Цепочка</th>
+                      <th>Ошибка</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                  {% for s in ssl_history %}
+                    <tr class="{% if not (s.time_valid_now and s.chain_ok) %}table-danger{% endif %}">
+                      <td class="text-nowrap">{{ s.checked_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                      <td class="text-truncate" style="max-width:18rem;" title="{{ s.issuer }}">{{ s.issuer or '-' }}</td>
+                      <td class="text-nowrap">{% if s.not_after %}{{ s.not_after.strftime('%Y-%m-%d') }}{% else %}-{% endif %}</td>
+                      <td class="text-end">{{ s.days_to_expiry if s.days_to_expiry is not none else '-' }}</td>
+                      <td class="text-center">{{ '✔' if s.time_valid_now else '✖' }}</td>
+                      <td class="text-center">{{ '✔' if s.chain_ok else '✖' }}</td>
+                      <td class="text-truncate" style="max-width:18rem;" title="{{ s.error }}">{{ s.error or '' }}</td>
+                    </tr>
+                  {% else %}
+                    <tr><td colspan="7" class="text-muted">Пока нет данных</td></tr>
+                  {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /row -->
+    </div><!-- /tab tables -->
+  </div><!-- /tab-content -->
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+  const httpLabels = {{ http_labels|tojson }};
+  const httpResp   = {{ http_resp|tojson }};
+  const httpStatus = {{ http_status|tojson }};
+
+  new Chart(document.getElementById('httpRespChart'), {
+    type: 'line',
+    data: { labels: httpLabels, datasets: [{ label: 'сек', data: httpResp, fill: false, tension: 0.2 }] },
+    options: { responsive: true, animation: false, scales: { y: { beginAtZero: true } } }
+  });
+
+  new Chart(document.getElementById('httpStatusChart'), {
+    type: 'bar',
+    data: { labels: httpLabels, datasets: [{ label: 'HTTP код', data: httpStatus }] },
+    options: { responsive: true, animation: false, scales: { y: { beginAtZero: true, suggestedMax: 600 } } }
+  });
+</script>
+
+{% endblock %}

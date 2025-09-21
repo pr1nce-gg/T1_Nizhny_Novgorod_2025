@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+  /* Таблица на всю ширину */
+  .table-sites { table-layout: auto; width: 100%; font-size: 1rem; } /* +чуть крупнее */
+  /* ужимаем внутренние отступы ячеек */
+  .table-sites.table-sm> :not(caption)>*>* { padding: .28rem .4rem; } /* было ~.35/.5 */
+  .table-sites th, .table-sites td { vertical-align: middle; }
+
+  /* Процентные ширины — таблица тянется */
+  .col-name   { width: 12%; }
+  .col-url    { width: 28%; }
+  .col-status { width: 8%;  }
+  .col-int    { width: 7%;  }
+  .col-last   { width: 16%; }
+  .col-up     { width: 14%; }
+  .col-iss    { width: 15%; }
+  .col-exp    { width: 10%; }
+  .col-days   { width: 7%;  }
+  .col-valid  { width: 6%;  text-align:center; }
+  .col-chain  { width: 7%;  text-align:center; }
+  .col-act    { width: 9%;  text-align:right; }
+
+  /* URL/Issuer — в одну строку с троеточием */
+  .url-clip, .issuer-clip {
+    display: inline-block; max-width: 100%;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    vertical-align: bottom;
+  }
+
+  /* компактные бейджи и прогресс */
+  .badge { font-size: .74rem; }
+  .progress { height: 7px; }
+  /* уменьшаем “зазор” в ячейке Uptime */
+  .uptime-wrap { gap:.3rem; }
+</style>
+
+
+
+<div class="d-flex align-items-center justify-content-between mb-2">
+  <h2 class="mb-0" style="font-size:1.6rem;">Управление сайтами</h2>
+  <a class="btn btn-primary btn-sm" href="/sites/new">+ Добавить сайт</a>
+</div>
+
+<div class="table-responsive">
+  <table class="table table-striped table-hover align-middle table-sm table-sites">
+    <thead class="table-light">
+      <tr>
+        <th class="col-name">Сайт</th>
+        <th class="col-url">URL</th>
+        <th class="col-status">Статус</th>
+        <th class="col-int">Интервал</th>
+        <th class="col-last">Последняя проверка</th>
+        <th class="col-up">Uptime 24h</th>
+
+        <!-- SSL -->
+        <th class="col-iss">SSL Issuer</th>
+        <th class="col-exp">Истекает</th>
+        <th class="col-days">Дней</th>
+        <th class="col-valid">Валиден</th>
+        <th class="col-chain">Цепочка</th>
+
+        <th class="col-act">Действия</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for site in sites %}
+      {% set s = ssl_map.get(site.id) %}
+      <tr class="{% if s and (not s.time_valid_now or not s.chain_ok or (s.days_to_expiry is not none and s.days_to_expiry <= 7)) %}table-danger{% endif %}">
+        <td class="fw-semibold col-name">{{ site.name }}</td>
+
+        <td class="col-url">
+          {% set full_url = site.url %}
+          <a class="url-clip" href="{{ full_url }}" title="{{ full_url }}" target="_blank" rel="noopener">
+            {{ full_url }}
+          </a>
+          {% if site.description %}
+            <div class="text-muted small">{{ site.description }}</div>
+          {% endif %}
+        </td>
+
+        <td class="col-status">
+  {% set ok = status_ok_map.get(site.id) %}
+  {% if ok is none %}
+    <span class="badge text-bg-secondary">Нет данных</span>
+  {% elif ok %}
+    <span class="badge text-bg-success">Работает</span>
+  {% else %}
+    <span class="badge text-bg-danger">Проблема</span>
+  {% endif %}
+</td>
+
+        <td class="col-int"><span class="badge text-bg-info">{{ site.interval_seconds }}s</span></td>
+        <td class="text-nowrap col-last">
+          {% if site.last_check_at %}
+            {{ site.last_check_at.strftime('%Y-%m-%d %H:%M:%S') }}
+          {% else %}-{% endif %}
+        </td>
+
+        <td class="col-up">
+          <div class="d-flex align-items-center uptime-wrap">
+            <div class="progress flex-grow-1">
+              <div class="progress-bar" role="progressbar" style="width: 100%;"></div>
+            </div>
+            <div class="small text-muted">100%</div>
+          </div>
+        </td>
+        
+
+        <!-- SSL -->
+        <td class="col-iss" title="{{ s.issuer if s else '' }}"><span class="issuer-clip">{{ s.issuer if s else '-' }}</span></td>
+        <td class="text-nowrap col-exp">{% if s and s.not_after %}{{ s.not_after.strftime('%Y-%m-%d') }}{% else %}-{% endif %}</td>
+        <td class="text-end col-days">{% if s and s.days_to_expiry is not none %}{{ s.days_to_expiry }}{% else %}-{% endif %}</td>
+        <td class="col-valid">{% if s %}{{ '✔' if s.time_valid_now else '✖' }}{% else %}-{% endif %}</td>
+        <td class="col-chain">{% if s %}{{ '✔' if s.chain_ok else '✖' }}{% else %}-{% endif %}</td>
+
+        <td class="text-nowrap col-act">
+          <a class="btn btn-sm btn-outline-primary me-1" title="Статистика" href="/sites/{{ site.id }}/stats">📊</a>
+          <a class="btn btn-sm btn-outline-secondary me-1" title="Редактировать" href="/sites/{{ site.id }}/edit">✏️</a>
+          <a class="btn btn-sm btn-outline-danger" title="Удалить" href="/sites/{{ site.id }}/delete"
+             onclick="return confirm('Удалить сайт «{{ site.name }}»?');">🗑️</a>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}

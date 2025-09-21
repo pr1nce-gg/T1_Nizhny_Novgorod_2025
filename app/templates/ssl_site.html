@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block content %}
+<h2 class="mb-3">SSL — {{ site.name or site.url }}</h2>
+
+<div class="row">
+  <div class="col-12 col-lg-7 mb-4">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">История сканов</h5>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>Когда</th>
+                <th>Issuer</th>
+                <th>CN</th>
+                <th>Истекает</th>
+                <th>Ост. дни</th>
+                <th>Host</th>
+                <th>Валиден</th>
+                <th>Цепочка</th>
+                <th>Ошибка</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for s in history %}
+              <tr class="{% if not s.time_valid_now or not s.chain_ok or s.error %}table-danger{% endif %}">
+                <td>{{ s.checked_at }}</td>
+                <td>{{ s.issuer or '-' }}</td>
+                <td>{{ s.subject_cn or '-' }}</td>
+                <td>{{ s.not_after or '-' }}</td>
+                <td>{{ s.days_to_expiry if s.days_to_expiry is not none else '-' }}</td>
+                <td>{{ '✔' if s.hostname_ok else '✖' }}</td>
+                <td>{{ '✔' if s.time_valid_now else '✖' }}</td>
+                <td>{{ '✔' if s.chain_ok else '✖' }}</td>
+                <td class="text-truncate" style="max-width:200px">{{ s.error or '' }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-5 mb-4">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Тренд остатка дней</h5>
+        <canvas id="trend"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+const history = {{ history|tojson }};
+const labels = history.map(h => h.checked_at);
+const days = history.map(h => h.days_to_expiry ?? 0);
+new Chart(document.getElementById('trend'), {
+  type: 'line',
+  data: { labels, datasets: [{ label: 'Ост. дней', data: days, fill: false, tension: 0.2 }] },
+  options: { responsive: true, animation: false, scales: { y: { beginAtZero: true } } }
+});
+</script>
+{% endblock %}

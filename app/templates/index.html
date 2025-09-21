@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="text-center my-5">
+    <h1>Website Monitor</h1>
+    <p class="text-muted">Круглосуточный мониторинг доступности ваших веб‑сайтов с мгновенными уведомлениями о сбоях</p>
+
+    <div class="row g-4 my-4">
+      <div class="col-md-4">
+        <div class="card h-100"><div class="card-body">
+          <h5>Мониторинг 24/7</h5>
+          <p>Непрерывная проверка доступности ваших сайтов с настраиваемыми интервалами.</p>
+        </div></div>
+      </div>
+      <div class="col-md-4">
+        <div class="card h-100"><div class="card-body">
+          <h5>Мгновенные уведомления</h5>
+          <p>Предупреждения о сбоях в реальном времени c деталями проверки.</p>
+        </div></div>
+      </div>
+      <div class="col-md-4">
+        <div class="card h-100"><div class="card-body">
+          <h5>Детальная статистика</h5>
+          <p>Аналитика работы сайтов за различные периоды времени.</p>
+        </div></div>
+      </div>
+    </div>
+
+    <p class="lead">Начните мониторинг прямо сейчас!</p>
+    <div class="d-flex gap-3 justify-content-center">
+      <a class="btn btn-primary" href="/login">Войти в систему</a>
+      <a class="btn btn-outline-primary" href="/register">Зарегистрироваться</a>
+    </div>
+    <div class="text-muted mt-3">
+      <small></small>
+    </div>
+  </div>
+{% endblock %}
