@@ -1,0 +1,8 @@
+.env
+.env.*
+*.env
+# локальная среда/IDE
+.vscode/
+.idea/
+__pycache__/
+*.pyc
